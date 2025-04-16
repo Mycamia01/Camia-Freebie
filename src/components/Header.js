@@ -49,27 +49,6 @@ export default function Header() {
                 Dashboard
               </a>
             </li>
-            <li>
-              {mounted && (
-                !isAuthenticated ? (
-                  <button
-                    onClick={handleLoginClick}
-                    className="hover:underline px-3 py-1 bg-gray-700 rounded"
-                    aria-label="Login"
-                  >
-                    Login
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleLogoutClick}
-                    className="hover:underline px-3 py-1 bg-gray-700 rounded"
-                    aria-label="Logout"
-                  >
-                    Logout
-                  </button>
-                )
-              )}
-            </li>
           </ul>
         </nav>
       </div>
