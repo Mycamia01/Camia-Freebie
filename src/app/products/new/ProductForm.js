@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import productService from "../../lib/services/productService";
+import productService from "../../../lib/services/productService";
 import { Save, ArrowLeft } from "lucide-react";
 
 export default function ProductForm({ productId }) {
@@ -14,7 +14,8 @@ export default function ProductForm({ productId }) {
     name: "",
     variant: "",
     price: "",
-    qty: ""
+    qty: "",
+    category: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,8 @@ export default function ProductForm({ productId }) {
             setFormData({
               ...product,
               price: product.price.toString(),
-              qty: product.qty.toString()
+              qty: product.qty.toString(),
+              category: product.category || ""
             });
           } else {
             setError("Product not found");
@@ -60,34 +62,38 @@ export default function ProductForm({ productId }) {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       // Convert string values to appropriate types
       const formattedData = {
         ...formData,
         price: parseFloat(formData.price),
-        qty: parseInt(formData.qty, 10)
+        qty: parseInt(formData.qty, 10),
       };
-      
+
       if (isNaN(formattedData.price) || formattedData.price < 0) {
         throw new Error("Price must be a valid positive number");
       }
-      
+
       if (isNaN(formattedData.qty) || formattedData.qty < 0) {
         throw new Error("Quantity must be a valid positive number");
       }
-      
+
+      if (!formattedData.category.trim()) {
+        throw new Error("Category is required");
+      }
+
       if (isEditing) {
         await productService.update(productId, formattedData);
       } else {
         await productService.create(formattedData);
       }
-      
+
       setSuccess(true);
-      
+
       // Redirect after short delay to show success message
       setTimeout(() => {
         router.push("/products");
@@ -173,6 +179,30 @@ export default function ProductForm({ productId }) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            {/* Category */}
+<div className="md:col-span-2">
+  <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+    Category *
+  </label>
+  <select
+    id="category"
+    name="category"
+    value={formData.category}
+    onChange={handleChange}
+    required
+    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+  >
+    <option value="" disabled>Select a category</option>
+    <option value="Handmade Organic Soaps">Handmade Organic Soaps</option>
+    <option value="Cold Pressed Extra Virgin Oils">Cold Pressed Extra Virgin Oils</option>
+    <option value="Essential Oils">Essential Oils</option>
+    <option value="Natural Lip Balms">Natural Lip Balms</option>
+    <option value="Skincare">Skincare</option>
+    <option value="Shop By Benefits">Shop By Benefits</option>
+    <option value="Gift Set Boxes">Gift Set Boxes</option>
+  </select>
+</div>
 
             {/* Price */}
             <div>

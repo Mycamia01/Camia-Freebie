@@ -91,6 +91,12 @@ export const customerSchema = {
       required: true,
       min: 0,
     },
+    category: {
+      type: 'string',
+      required: true,
+      minLength: 1,
+      maxLength: 50,
+  },
     createdAt: {
       type: 'object',
       required: false,

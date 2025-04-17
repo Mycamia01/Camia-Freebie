@@ -204,13 +204,13 @@ export default function Dashboard() {
             Add New Customer
           </Link>
           <Link 
-            href="/customers/new"
+            href="/purchases/new"
             className="bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md text-center font-medium"
           >
             Record Purchase
           </Link>
           <Link 
-            href="/products/add-product"
+            href="/products/new"
             className="bg-amber-600 hover:bg-amber-700 text-white py-3 px-4 rounded-md text-center font-medium"
           >
             Add New Product

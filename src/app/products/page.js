@@ -20,14 +20,12 @@ export default function ProductList() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
     }
   }, [user, authLoading, router]);
 
-  // Load products
   const loadProducts = async () => {
     try {
       setLoading(true);
@@ -56,7 +54,6 @@ export default function ProductList() {
     }
   }, [user, searchParams]);
 
-  // Handle search
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
       loadProducts();
@@ -75,31 +72,27 @@ export default function ProductList() {
     }
   };
 
-  // Handle search input
   const handleSearchInputChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // Handle search form submission
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     handleSearch();
   };
 
-  // Handle delete confirmation
   const confirmDelete = (product) => {
     setProductToDelete(product);
     setIsDeleting(true);
   };
 
-  // Handle delete product
   const handleDelete = async () => {
     if (!productToDelete) return;
 
     try {
       setLoading(true);
       await productService.delete(productToDelete.id);
-      setProducts(products.filter(p => p.id !== productToDelete.id));
+      setProducts(products.filter((p) => p.id !== productToDelete.id));
       setIsDeleting(false);
       setProductToDelete(null);
     } catch (err) {
@@ -109,7 +102,6 @@ export default function ProductList() {
     }
   };
 
-  // Cancel delete
   const cancelDelete = () => {
     setIsDeleting(false);
     setProductToDelete(null);
@@ -140,7 +132,7 @@ export default function ProductList() {
             <span>Refresh</span>
           </button>
           <Link
-            href="/products/add-product"
+            href="/products/new"
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             <Plus size={16} />
@@ -182,42 +174,18 @@ export default function ProductList() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Name
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Variant
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Price
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Quantity
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Actions
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variant</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {products.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
                   No products found. Start by adding a new product.
                 </td>
               </tr>
@@ -231,27 +199,22 @@ export default function ProductList() {
                     <div className="text-sm text-gray-500">{product.variant || "—"}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      ₹{product.price.toFixed(2)}
-                    </div>
+                    <div className="text-sm text-gray-900">₹{Number(product.price).toFixed(2)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm ${product.qty <= 5 ? "text-red-600 font-medium" : "text-gray-500"}`}>
                       {product.qty}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500">{product.category || "—"}</div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
+                      <Link href={`/products/${product.id}`} className="text-blue-600 hover:text-blue-900">
                         <Edit size={18} />
                       </Link>
-                      <button
-                        onClick={() => confirmDelete(product)}
-                        className="text-red-600 hover:text-red-900"
-                      >
+                      <button onClick={() => confirmDelete(product)} className="text-red-600 hover:text-red-900">
                         <Trash2 size={18} />
                       </button>
                     </div>
