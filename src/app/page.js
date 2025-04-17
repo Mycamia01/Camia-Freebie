@@ -1,6 +1,8 @@
+'use client';
+
 import Image from "next/image";
 
-export default function Home() {
+export default function HomePage() {
   return (
     <div className="min-h-screen pb-20 bg-gray-100">
       {/* Hero Section */}
@@ -17,8 +19,9 @@ export default function Home() {
           }
         `}</style>
         <div className="max-w-screen-xl mx-auto text-center">
-          <h1 className="text-4xl font-bold mb-4">Welcome to Our Service</h1>
-          <p className="text-lg mb-6">Your one-stop solution for e-commerce and customer management.</p>
+          <h1 className="text-4xl font-bold mb-4">Welcome CAMIA Employees</h1>
+          <p className="text-lg mb-6">1 Customer to 1 Buy to all our LOYALS.</p>
+          <p className="text-lg mb-6">We hope you have good news! ADD A NEW CUSTOMER!</p>
           <div className="flex justify-center gap-4">
             <a
               className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-white text-blue-600 hover:bg-gray-200 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
