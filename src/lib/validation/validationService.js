@@ -26,9 +26,16 @@ export const validateData = (data, schema) => {
       }
   
       // Type validation
-      if (rules.type && typeof value !== rules.type) {
-        errors[field] = `${field} must be a ${rules.type}`;
-        isValid = false;
+      if (rules.type) {
+        if (rules.type === 'array') {
+          if (!Array.isArray(value)) {
+            errors[field] = `${field} must be an array`;
+            isValid = false;
+          }
+        } else if (typeof value !== rules.type) {
+          errors[field] = `${field} must be a ${rules.type}`;
+          isValid = false;
+        }
       }
   
       // Min length validation for strings and arrays

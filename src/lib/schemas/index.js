@@ -117,10 +117,12 @@ export const customerSchema = {
       minLength: 1,
       maxLength: 100,
     },
-    description: {
-      type: 'string',
+    blend: {
+      type: 'array',
       required: false,
-      maxLength: 500,
+      items: {
+        type: 'string',
+      },
     },
     value: {
       type: 'number',
