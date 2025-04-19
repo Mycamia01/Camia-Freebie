@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import productService from "../../../lib/services/productService";
 import { Save, ArrowLeft } from "lucide-react";
 
-export default function ProductForm({ productId }) {
+export default function ProductForm({ productId, editableFields }) {
   const router = useRouter();
   const isEditing = !!productId;
 
@@ -129,9 +129,11 @@ export default function ProductForm({ productId }) {
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6 max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">
-          {isEditing ? "Edit Product" : "Add New Product"}
-        </h1>
+        { !isEditing && (
+          <h1 className="text-2xl font-bold mb-6">
+            Add New Product
+          </h1>
+        )}
 
         {error && (
           <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
@@ -150,95 +152,105 @@ export default function ProductForm({ productId }) {
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Product Name */}
-            <div className="md:col-span-2">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Product Name *
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            {!editableFields || editableFields.includes("name") ? (
+              <div className="md:col-span-2">
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            ) : null}
 
             {/* Variant */}
-            <div className="md:col-span-2">
-              <label htmlFor="variant" className="block text-sm font-medium text-gray-700 mb-1">
-                Variant
-              </label>
-              <input
-                type="text"
-                id="variant"
-                name="variant"
-                value={formData.variant}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            {!editableFields || editableFields.includes("variant") ? (
+              <div className="md:col-span-2">
+                <label htmlFor="variant" className="block text-sm font-medium text-gray-700 mb-1">
+                  Variant
+                </label>
+                <input
+                  type="text"
+                  id="variant"
+                  name="variant"
+                  value={formData.variant}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            ) : null}
 
             {/* Category */}
-<div className="md:col-span-2">
-  <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-    Category *
-  </label>
-  <select
-    id="category"
-    name="category"
-    value={formData.category}
-    onChange={handleChange}
-    required
-    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-  >
-    <option value="" disabled>Select a category</option>
-    <option value="Handmade Organic Soaps">Handmade Organic Soaps</option>
-    <option value="Cold Pressed Extra Virgin Oils">Cold Pressed Extra Virgin Oils</option>
-    <option value="Essential Oils">Essential Oils</option>
-    <option value="Natural Lip Balms">Natural Lip Balms</option>
-    <option value="Skincare">Skincare</option>
-    <option value="Shop By Benefits">Shop By Benefits</option>
-    <option value="Gift Set Boxes">Gift Set Boxes</option>
-  </select>
-</div>
+            {!editableFields || editableFields.includes("category") ? (
+              <div className="md:col-span-2">
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                  Category *
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="" disabled>Select a category</option>
+                  <option value="Handmade Organic Soaps">Handmade Organic Soaps</option>
+                  <option value="Cold Pressed Extra Virgin Oils">Cold Pressed Extra Virgin Oils</option>
+                  <option value="Essential Oils">Essential Oils</option>
+                  <option value="Natural Lip Balms">Natural Lip Balms</option>
+                  <option value="Skincare">Skincare</option>
+                  <option value="Shop By Benefits">Shop By Benefits</option>
+                  <option value="Gift Set Boxes">Gift Set Boxes</option>
+                </select>
+              </div>
+            ) : null}
 
             {/* Price */}
-            <div>
-              <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                Price (₹) *
-              </label>
-              <input
-                type="number"
-                id="price"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                required
-                min="0"
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            {!editableFields || editableFields.includes("price") ? (
+              <div>
+                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                  Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  id="price"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            ) : null}
 
             {/* Quantity */}
-            <div>
-              <label htmlFor="qty" className="block text-sm font-medium text-gray-700 mb-1">
-                Quantity *
-              </label>
-              <input
-                type="number"
-                id="qty"
-                name="qty"
-                value={formData.qty}
-                onChange={handleChange}
-                required
-                min="0"
-                step="1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            {!editableFields || editableFields.includes("qty") ? (
+              <div>
+                <label htmlFor="qty" className="block text-sm font-medium text-gray-700 mb-1">
+                  Quantity *
+                </label>
+                <input
+                  type="number"
+                  id="qty"
+                  name="qty"
+                  value={formData.qty}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                  step="1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="flex justify-end">

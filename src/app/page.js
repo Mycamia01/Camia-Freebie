@@ -1,8 +1,46 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../context/AuthContext';
 import { Users, Package, ShoppingCart, LogIn } from 'lucide-react';
 
 export default function HomePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        router.replace('/dashboard');
+      }
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    // Render a loading spinner while auth state is loading
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-16 w-16"></div>
+        <style>{`
+          .loader {
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (user) {
+    // If user is logged in, don't render home page content (redirect will happen)
+    return null;
+  }
+
   return (
     <div className="max-h-screen bg-gray-100 flex items-center justify-center">
       {/* Full-Screen Hero Section */}
@@ -57,4 +95,3 @@ function FeatureCard({ icon, title, description }) {
     </div>
   );
 }
-

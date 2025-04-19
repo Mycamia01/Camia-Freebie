@@ -94,7 +94,7 @@ export default function Dashboard() {
               <ShoppingBag className="h-8 w-8 text-green-600" />
             </div>
             <div className="ml-5">
-              <p className="text-gray-500">This Month's Purchases</p>
+              <p className="text-gray-500">Purchases Record Table</p>
               <h3 className="text-3xl font-semibold">{stats.currentMonthPurchases}</h3>
             </div>
           </div>
@@ -207,7 +207,7 @@ export default function Dashboard() {
             href="/purchases/new"
             className="bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md text-center font-medium"
           >
-            Record Purchase
+            Add Purchase Record
           </Link>
           <Link 
             href="/products/new"

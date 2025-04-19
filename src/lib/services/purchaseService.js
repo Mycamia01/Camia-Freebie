@@ -3,46 +3,84 @@ import DbService from './dbService';
 import { purchaseSchema, purchaseProductSchema } from '../schemas';
 import productService from './productService';
 import freebieService from './freebieService';
+import customerService from './customerService';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { firestore } from '../firebase/config';
+import { validateData } from '../validation/validationService';
 
 /**
  * Purchase service for purchase-related operations
  */
 class PurchaseService extends DbService {
-  /**
-   * Create a new PurchaseService instance
-   */
   constructor() {
     super('purchases', purchaseSchema);
   }
 
-  /**
-   * Create a new purchase with products and optional freebie
-   * @param {Object} purchaseData - Purchase data
-   * @returns {Promise<Object>} Created purchase
-   */
   async createPurchase(purchaseData) {
     try {
-      // Validate products array
+      let customerId = purchaseData.customerId;
+      if (!customerId && purchaseData.customer) {
+        const { phone, email } = purchaseData.customer;
+        console.log('Debug: phone:', phone, 'email:', email);
+        let existingCustomers = [];
+
+        if (phone) {
+          existingCustomers = await customerService.query([
+            { field: 'phone', operator: '==', value: phone }
+          ]);
+          console.log('Debug: existingCustomers by phone:', existingCustomers.length);
+        }
+
+        if (existingCustomers.length === 0 && email) {
+          existingCustomers = await customerService.query([
+            { field: 'email', operator: '==', value: email }
+          ]);
+          console.log('Debug: existingCustomers by email:', existingCustomers.length);
+        }
+
+        if (existingCustomers.length > 0) {
+          customerId = existingCustomers[0].id;
+          console.log('Debug: customerId found:', customerId);
+        } else {
+          const newCustomer = await customerService.create(purchaseData.customer);
+          customerId = newCustomer.id;
+          console.log('Debug: new customer created with id:', customerId);
+        }
+      }
+
+      if (!customerId) {
+        throw new Error('Customer information is required');
+      }
+
+      purchaseData.customerId = customerId;
+
+      // Validate the main purchase data after setting customerId
+      const purchaseValidation = validateData(purchaseData, purchaseSchema);
+      if (!purchaseValidation.isValid) {
+        throw new Error(`Validation failed: ${JSON.stringify(purchaseValidation.errors)}`);
+      }
+
       if (!purchaseData.products || !Array.isArray(purchaseData.products) || purchaseData.products.length === 0) {
         throw new Error('Purchase must include at least one product');
       }
 
-      // Validate each product in the products array
+      // Validate and process each product
       purchaseData.products.forEach(product => {
         const validationResult = validateData(product, purchaseProductSchema);
         if (!validationResult.isValid) {
           throw new Error(`Product validation failed: ${JSON.stringify(validationResult.errors)}`);
         }
+
+        // Calculate subtotal if not provided
+        if (typeof product.subtotal !== 'number') {
+          product.subtotal = product.price * product.qty;
+        }
       });
 
-      // Set purchase date if not provided
       if (!purchaseData.purchaseDate) {
         purchaseData.purchaseDate = Timestamp.now();
       }
 
-      // Create the purchase
       const purchase = await this.create(purchaseData);
 
       // Update product quantities
@@ -50,7 +88,7 @@ class PurchaseService extends DbService {
         await productService.updateQuantity(product.productId, -product.qty);
       }
 
-      // Record freebie sent if included
+      // Handle freebie if included
       if (purchaseData.freebieId) {
         const freebie = await freebieService.getById(purchaseData.freebieId);
         if (freebie) {
@@ -66,31 +104,22 @@ class PurchaseService extends DbService {
 
       return purchase;
     } catch (error) {
+      console.error('Purchase creation failed:', error);
       throw error;
     }
   }
 
-  /**
-   * Get purchases by customer ID
-   * @param {string} customerId - Customer ID
-   * @returns {Promise<Array>} Array of purchases by the customer
-   */
   async getPurchasesByCustomer(customerId) {
     try {
       return await this.query([
         { field: 'customerId', operator: '==', value: customerId }
       ], { orderByField: 'purchaseDate', orderDirection: 'desc' });
     } catch (error) {
+      console.error('Error fetching customer purchases:', error);
       throw error;
     }
   }
 
-  /**
-   * Get purchases by date range
-   * @param {Date} startDate - Start date
-   * @param {Date} endDate - End date
-   * @returns {Promise<Array>} Array of purchases in the date range
-   */
   async getPurchasesByDateRange(startDate, endDate) {
     try {
       const startTimestamp = Timestamp.fromDate(startDate);
@@ -101,52 +130,40 @@ class PurchaseService extends DbService {
         { field: 'purchaseDate', operator: '<=', value: endTimestamp }
       ], { orderByField: 'purchaseDate', orderDirection: 'desc' });
     } catch (error) {
+      console.error('Error fetching purchases by date range:', error);
       throw error;
     }
   }
 
-  /**
-   * Get purchases with freebies
-   * @returns {Promise<Array>} Array of purchases with freebies
-   */
   async getPurchasesWithFreebies() {
     try {
       return await this.query([
         { field: 'freebieId', operator: '!=', value: null }
       ]);
     } catch (error) {
+      console.error('Error fetching purchases with freebies:', error);
       throw error;
     }
   }
 
-  /**
-   * Calculate total sales for a given period
-   * @param {Date} startDate - Start date
-   * @param {Date} endDate - End date
-   * @returns {Promise<number>} Total sales amount
-   */
   async calculateTotalSales(startDate, endDate) {
     try {
       const purchases = await this.getPurchasesByDateRange(startDate, endDate);
       return purchases.reduce((total, purchase) => total + purchase.totalAmount, 0);
     } catch (error) {
+      console.error('Error calculating total sales:', error);
       throw error;
     }
   }
 
-  /**
-   * Get monthly purchase statistics for the current year
-   * @returns {Promise<Array>} Array of monthly purchase statistics
-   */
   async getMonthlyPurchaseStats() {
     try {
       const currentYear = new Date().getFullYear();
-      const startDate = new Date(currentYear, 0, 1); // January 1st of current year
-      const endDate = new Date(currentYear, 11, 31); // December 31st of current year
+      const startDate = new Date(currentYear, 0, 1);
+      const endDate = new Date(currentYear, 11, 31);
       
       const purchases = await this.getPurchasesByDateRange(startDate, endDate);
       
-      // Initialize monthly stats
       const monthlyStats = Array(12).fill().map((_, i) => ({
         month: i + 1,
         monthName: new Date(currentYear, i, 1).toLocaleString('default', { month: 'long' }),
@@ -155,7 +172,6 @@ class PurchaseService extends DbService {
         averageAmount: 0
       }));
       
-      // Calculate stats for each purchase
       purchases.forEach(purchase => {
         const month = purchase.purchaseDate instanceof Date 
           ? purchase.purchaseDate.getMonth()
@@ -165,7 +181,6 @@ class PurchaseService extends DbService {
         monthlyStats[month].purchaseCount += 1;
       });
       
-      // Calculate average amount
       monthlyStats.forEach(stat => {
         if (stat.purchaseCount > 0) {
           stat.averageAmount = stat.totalSales / stat.purchaseCount;
@@ -174,14 +189,11 @@ class PurchaseService extends DbService {
       
       return monthlyStats;
     } catch (error) {
+      console.error('Error generating monthly stats:', error);
       throw error;
     }
   }
 
-  /**
-   * Get a count of purchases for the current month
-   * @returns {Promise<number>} Number of purchases in the current month
-   */
   async getCurrentMonthPurchaseCount() {
     try {
       const now = new Date();
@@ -191,42 +203,11 @@ class PurchaseService extends DbService {
       const purchases = await this.getPurchasesByDateRange(startOfMonth, endOfMonth);
       return purchases.length;
     } catch (error) {
+      console.error('Error fetching current month purchases:', error);
       throw error;
     }
   }
 }
 
-// Helper function for validation
-function validateData(data, schema) {
-  // Reuse the validation function from validationService
-  const errors = {};
-  let isValid = true;
-
-  Object.entries(schema).forEach(([field, rules]) => {
-    const value = data[field];
-
-    if (rules.required && (value === undefined || value === null || value === '')) {
-      errors[field] = `${field} is required`;
-      isValid = false;
-      return;
-    }
-
-    if (value === undefined || value === null || value === '') {
-      return;
-    }
-
-    if (rules.validate && typeof rules.validate === 'function') {
-      const validateResult = rules.validate(value, data);
-      if (validateResult !== true) {
-        errors[field] = validateResult || `${field} is invalid`;
-        isValid = false;
-      }
-    }
-  });
-
-  return { isValid, errors };
-}
-
-// Create and export an instance of PurchaseService
 const purchaseService = new PurchaseService();
 export default purchaseService;

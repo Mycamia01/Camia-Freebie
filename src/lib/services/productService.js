@@ -88,6 +88,10 @@ class ProductService extends DbService {
       if (!product) {
         throw new Error(`Product with ID ${id} not found`);
       }
+
+      if (!product.category) {
+        throw new Error(`Product with ID ${id} is missing required field 'category'`);
+      }
       
       const newQty = product.qty + qtyChange;
       if (newQty < 0) {
