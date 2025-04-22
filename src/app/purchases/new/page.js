@@ -16,13 +16,11 @@ export default function NewPurchasePage() {
     phone: "",
     email: "",
     hairType: "",
-    pincode: "",
+    skinType: "",
     address: {
-      street: "",
+      pincode: "",
       city: "",
       state: "",
-      zip: "",
-      country: "",
     },
   });
 
@@ -251,11 +249,10 @@ export default function NewPurchasePage() {
             />
             <input
               type="text"
-              name="pincode"
-              placeholder="Pincode *"
-              value={customer.pincode}
+              name="skinTyoe"
+              placeholder="Skin Type"
+              value={customer.skinType}
               onChange={handleCustomerChange}
-              required
               className="border p-2 rounded w-full"
             />
           </div>
@@ -263,10 +260,11 @@ export default function NewPurchasePage() {
             <h3 className="font-semibold mb-2">Address</h3>
             <input
               type="text"
-              name="address.street"
-              placeholder="Street"
-              value={customer.address.street}
+              name="pincode"
+              placeholder="Pincode *"
+              value={customer.pincode}
               onChange={handleCustomerChange}
+              required
               className="border p-2 rounded w-full mb-2"
             />
             <input
@@ -284,22 +282,6 @@ export default function NewPurchasePage() {
               value={customer.address.state}
               onChange={handleCustomerChange}
               className="border p-2 rounded w-full mb-2"
-            />
-            <input
-              type="text"
-              name="address.zip"
-              placeholder="Zip Code"
-              value={customer.address.zip}
-              onChange={handleCustomerChange}
-              className="border p-2 rounded w-full mb-2"
-            />
-            <input
-              type="text"
-              name="address.country"
-              placeholder="Country"
-              value={customer.address.country}
-              onChange={handleCustomerChange}
-              className="border p-2 rounded w-full"
             />
           </div>
         </fieldset>
