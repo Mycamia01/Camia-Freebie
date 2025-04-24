@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import purchaseService from "../../../lib/services/purchaseService";
 import productService from "../../../lib/services/productService";
 import freebieService from "../../../lib/services/freebieService";
+import customerService from "../../../lib/services/customerService";
 
 export default function EditPurchasePage() {
   const router = useRouter();
@@ -18,13 +18,11 @@ export default function EditPurchasePage() {
     phone: "",
     email: "",
     hairType: "",
-    pincode: "",
+    skinType: "",
     address: {
-      street: "",
+      pincode: "",
       city: "",
       state: "",
-      zip: "",
-      country: "",
     },
   });
 
@@ -52,7 +50,11 @@ export default function EditPurchasePage() {
         setFreebies(allFreebies);
         setSelectedProducts(purchase.products || []);
         setSelectedFreebieId(purchase.freebieId || "");
-        setPurchaseDate(purchase.purchaseDate ? new Date(purchase.purchaseDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+        setPurchaseDate(
+          purchase.purchaseDate
+            ? new Date(purchase.purchaseDate).toISOString().slice(0, 10)
+            : new Date().toISOString().slice(0, 10)
+        );
         setLoading(false);
       } catch (err) {
         setError("Failed to load purchase data: " + err.message);
@@ -65,29 +67,18 @@ export default function EditPurchasePage() {
   useEffect(() => {
     const total = selectedProducts.reduce((sum, item) => {
       const product = products.find((p) => p.id === item.productId);
-      if (product) {
-        return sum + product.price * item.qty;
-      }
-      return sum;
+      return product ? sum + product.price * item.qty : sum;
     }, 0);
     setTotalAmount(total);
   }, [selectedProducts, products]);
 
   const handleCustomerChange = (e) => {
     const { name, value } = e.target;
-    if (name === "pincode") {
+    if (name.startsWith("address.")) {
+      const field = name.split(".")[1];
       setCustomer((prev) => ({
         ...prev,
-        pincode: value,
-      }));
-    } else if (name.startsWith("address.")) {
-      const addressField = name.split(".")[1];
-      setCustomer((prev) => ({
-        ...prev,
-        address: {
-          ...prev.address,
-          [addressField]: value,
-        },
+        address: { ...prev.address, [field]: value },
       }));
     } else {
       setCustomer((prev) => ({
@@ -98,13 +89,11 @@ export default function EditPurchasePage() {
   };
 
   const toggleProductSelection = (productId) => {
-    setSelectedProducts((prev) => {
-      if (prev.find((item) => item.productId === productId)) {
-        return prev.filter((item) => item.productId !== productId);
-      } else {
-        return [...prev, { productId, qty: 1 }];
-      }
-    });
+    setSelectedProducts((prev) =>
+      prev.find((item) => item.productId === productId)
+        ? prev.filter((item) => item.productId !== productId)
+        : [...prev, { productId, qty: 1 }]
+    );
   };
 
   const handleProductQtyChange = (productId, qty) => {
@@ -119,22 +108,15 @@ export default function EditPurchasePage() {
     setSelectedFreebieId(e.target.value);
   };
 
-  const validatePhone = (phone) => {
-    const phoneRegex = /^\+?[0-9]{7,15}$/;
-    return phoneRegex.test(phone.trim());
-  };
-
-  const validatePincode = (pincode) => {
-    const pincodeRegex = /^\d{5,10}$/;
-    return pincodeRegex.test(pincode.trim());
-  };
+  const validatePhone = (phone) => /^\+?[0-9]{7,15}$/.test(phone.trim());
+  const validatePincode = (pincode) => /^\d{5,10}$/.test(pincode.trim());
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
     const trimmedPhone = customer.phone.trim();
-    const trimmedPincode = customer.pincode.trim();
+    const trimmedPincode = customer.address.pincode.trim();
 
     if (!validatePhone(trimmedPhone)) {
       setError("Phone number must be valid and contain 7 to 15 digits");
@@ -146,18 +128,20 @@ export default function EditPurchasePage() {
       return;
     }
 
-    if (selectedProducts.length === 0) {
-      setError("Please select at least one product with quantity.");
-      return;
-    }
     if (!customer.firstName || !customer.lastName || !trimmedPhone || !customer.email) {
       setError("Please fill in all required customer details.");
       return;
     }
+
+    if (selectedProducts.length === 0) {
+      setError("Please select at least one product with quantity.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const enrichedProducts = selectedProducts.map(item => {
-        const product = products.find(p => p.id === item.productId);
+      const enrichedProducts = selectedProducts.map((item) => {
+        const product = products.find((p) => p.id === item.productId);
         return {
           productId: item.productId,
           qty: item.qty,
@@ -169,13 +153,17 @@ export default function EditPurchasePage() {
         customer: {
           ...customer,
           phone: trimmedPhone,
-          pincode: trimmedPincode,
+          address: {
+            ...customer.address,
+            pincode: trimmedPincode,
+          },
         },
         products: enrichedProducts,
         freebieId: selectedFreebieId || null,
         totalAmount,
         purchaseDate: new Date(purchaseDate),
       };
+
       await purchaseService.updatePurchase(purchaseId, purchaseData);
       router.push("/purchases");
     } catch (err) {
@@ -186,111 +174,25 @@ export default function EditPurchasePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 mb-24 max-w-4xl">
       <h1 className="text-2xl font-bold mb-6">Edit Purchase</h1>
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>
-      )}
+      {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-6">
         <fieldset className="border p-4 rounded">
           <legend className="font-semibold mb-2">Customer Details</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              name="firstName"
-              placeholder="First Name *"
-              value={customer.firstName}
-              onChange={handleCustomerChange}
-              required
-              className="border p-2 rounded w-full"
-            />
-            <input
-              type="text"
-              name="lastName"
-              placeholder="Last Name *"
-              value={customer.lastName}
-              onChange={handleCustomerChange}
-              required
-              className="border p-2 rounded w-full"
-            />
-            <input
-              type="text"
-              name="phone"
-              placeholder="Phone Number *"
-              value={customer.phone}
-              onChange={handleCustomerChange}
-              required
-              className="border p-2 rounded w-full"
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="Email *"
-              value={customer.email}
-              onChange={handleCustomerChange}
-              required
-              className="border p-2 rounded w-full"
-            />
-            <input
-              type="text"
-              name="hairType"
-              placeholder="Hair Type"
-              value={customer.hairType}
-              onChange={handleCustomerChange}
-              className="border p-2 rounded w-full"
-            />
-            <input
-              type="text"
-              name="pincode"
-              placeholder="Pincode *"
-              value={customer.pincode}
-              onChange={handleCustomerChange}
-              required
-              className="border p-2 rounded w-full"
-            />
+            <input type="text" name="firstName" placeholder="First Name *" value={customer.firstName} onChange={handleCustomerChange} required className="border p-2 rounded w-full" />
+            <input type="text" name="lastName" placeholder="Last Name *" value={customer.lastName} onChange={handleCustomerChange} required className="border p-2 rounded w-full" />
+            <input type="text" name="phone" placeholder="Phone Number *" value={customer.phone} onChange={handleCustomerChange} required className="border p-2 rounded w-full" />
+            <input type="email" name="email" placeholder="Email *" value={customer.email} onChange={handleCustomerChange} required className="border p-2 rounded w-full" />
+            <input type="text" name="hairType" placeholder="Hair Type" value={customer.hairType} onChange={handleCustomerChange} className="border p-2 rounded w-full" />
+            <input type="text" name="skinType" placeholder="Skin Type" value={customer.skinType} onChange={handleCustomerChange} className="border p-2 rounded w-full" />
           </div>
           <div className="mt-4">
             <h3 className="font-semibold mb-2">Address</h3>
-            <input
-              type="text"
-              name="address.street"
-              placeholder="Street"
-              value={customer.address.street}
-              onChange={handleCustomerChange}
-              className="border p-2 rounded w-full mb-2"
-            />
-            <input
-              type="text"
-              name="address.city"
-              placeholder="City"
-              value={customer.address.city}
-              onChange={handleCustomerChange}
-              className="border p-2 rounded w-full mb-2"
-            />
-            <input
-              type="text"
-              name="address.state"
-              placeholder="State"
-              value={customer.address.state}
-              onChange={handleCustomerChange}
-              className="border p-2 rounded w-full mb-2"
-            />
-            <input
-              type="text"
-              name="address.zip"
-              placeholder="Zip Code"
-              value={customer.address.zip}
-              onChange={handleCustomerChange}
-              className="border p-2 rounded w-full mb-2"
-            />
-            <input
-              type="text"
-              name="address.country"
-              placeholder="Country"
-              value={customer.address.country}
-              onChange={handleCustomerChange}
-              className="border p-2 rounded w-full"
-            />
+            <input type="text" name="address.pincode" placeholder="Pincode *" value={customer.address.pincode} onChange={handleCustomerChange} required className="border p-2 rounded w-full mb-2" />
+            <input type="text" name="address.city" placeholder="City" value={customer.address.city} onChange={handleCustomerChange} className="border p-2 rounded w-full mb-2" />
+            <input type="text" name="address.state" placeholder="State" value={customer.address.state} onChange={handleCustomerChange} className="border p-2 rounded w-full mb-2" />
           </div>
         </fieldset>
 
@@ -315,10 +217,7 @@ export default function EditPurchasePage() {
             {productDropdownOpen && (
               <div className="absolute z-10 w-full bg-white border border-gray-300 mt-1 rounded-md shadow-md max-h-60 overflow-y-auto">
                 {products.map((product) => (
-                  <label
-                    key={product.id}
-                    className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                  >
+                  <label key={product.id} className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer">
                     <input
                       type="checkbox"
                       value={product.id}
@@ -333,9 +232,7 @@ export default function EditPurchasePage() {
                         type="number"
                         min="1"
                         max={product.qty}
-                        value={
-                          selectedProducts.find((item) => item.productId === product.id)?.qty || 1
-                        }
+                        value={selectedProducts.find((item) => item.productId === product.id)?.qty || 1}
                         onChange={(e) => handleProductQtyChange(product.id, e.target.value)}
                         className="ml-4 w-16 border p-1 rounded"
                         disabled={loading}

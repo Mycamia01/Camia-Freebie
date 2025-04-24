@@ -109,6 +109,38 @@ class PurchaseService extends DbService {
     }
   }
 
+  async updatePurchase(purchaseId, purchaseData) {
+    try {
+      // Validate purchaseData
+      const purchaseValidation = validateData(purchaseData, purchaseSchema);
+      if (!purchaseValidation.isValid) {
+        throw new Error(`Validation failed: ${JSON.stringify(purchaseValidation.errors)}`);
+      }
+
+      // Validate and process each product
+      if (!purchaseData.products || !Array.isArray(purchaseData.products) || purchaseData.products.length === 0) {
+        throw new Error('Purchase must include at least one product');
+      }
+      purchaseData.products.forEach(product => {
+        const validationResult = validateData(product, purchaseProductSchema);
+        if (!validationResult.isValid) {
+          throw new Error(`Product validation failed: ${JSON.stringify(validationResult.errors)}`);
+        }
+        if (typeof product.subtotal !== 'number') {
+          product.subtotal = product.price * product.qty;
+        }
+      });
+
+      // Update the purchase document in the database
+      const updatedPurchase = await this.update(purchaseId, purchaseData);
+
+      return updatedPurchase;
+    } catch (error) {
+      console.error('Purchase update failed:', error);
+      throw error;
+    }
+  }
+
   async getPurchasesByCustomer(customerId) {
     try {
       return await this.query([

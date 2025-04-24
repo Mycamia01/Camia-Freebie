@@ -1,4 +1,4 @@
-// app/products/page.js
+// src/app/products/page.js
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,6 +19,8 @@ export default function ProductList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -41,6 +43,7 @@ export default function ProductList() {
       }
 
       setProducts(data);
+      setSelectedProductIds([]);
     } catch (err) {
       setError("Failed to load products: " + err.message);
     } finally {
@@ -65,6 +68,7 @@ export default function ProductList() {
       setError(null);
       const results = await productService.searchByName(searchTerm);
       setProducts(results);
+      setSelectedProductIds([]);
     } catch (err) {
       setError("Search failed: " + err.message);
     } finally {
@@ -95,6 +99,7 @@ export default function ProductList() {
       setProducts(products.filter((p) => p.id !== productToDelete.id));
       setIsDeleting(false);
       setProductToDelete(null);
+      setSelectedProductIds((prev) => prev.filter(id => id !== productToDelete.id));
     } catch (err) {
       setError("Delete failed: " + err.message);
     } finally {
@@ -105,6 +110,40 @@ export default function ProductList() {
   const cancelDelete = () => {
     setIsDeleting(false);
     setProductToDelete(null);
+  };
+
+  const toggleProductSelection = (productId) => {
+    setSelectedProductIds((prev) => {
+      if (prev.includes(productId)) {
+        return prev.filter((id) => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+  };
+
+  const openBulkDeleteConfirm = () => {
+    setIsBulkDeleteConfirmOpen(true);
+  };
+
+  const closeBulkDeleteConfirm = () => {
+    setIsBulkDeleteConfirmOpen(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProductIds.length === 0) return;
+
+    try {
+      setLoading(true);
+      await Promise.all(selectedProductIds.map(id => productService.delete(id)));
+      setProducts(products.filter(p => !selectedProductIds.includes(p.id)));
+      setSelectedProductIds([]);
+      setIsBulkDeleteConfirmOpen(false);
+    } catch (err) {
+      setError("Bulk delete failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (authLoading || (loading && products.length === 0)) {
@@ -141,6 +180,17 @@ export default function ProductList() {
         </div>
       </div>
 
+      {selectedProductIds.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={openBulkDeleteConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Delete All ({selectedProductIds.length})
+          </button>
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
           <p className="font-bold">Error</p>
@@ -174,8 +224,20 @@ export default function ProductList() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedProductIds(products.map(p => p.id));
+                    } else {
+                      setSelectedProductIds([]);
+                    }
+                  }}
+                  checked={selectedProductIds.length === products.length && products.length > 0}
+                />
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variant</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
@@ -193,10 +255,14 @@ export default function ProductList() {
               products.map((product) => (
                 <tr key={product.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                    <input
+                      type="checkbox"
+                      checked={selectedProductIds.includes(product.id)}
+                      onChange={() => toggleProductSelection(product.id)}
+                    />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{product.variant || "—"}</div>
+                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">₹{Number(product.price).toFixed(2)}</div>
@@ -226,6 +292,32 @@ export default function ProductList() {
         </table>
       </div>
 
+      {/* Bulk Delete Confirmation Modal */}
+      {isBulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Bulk Delete</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Are you sure you want to delete all selected products? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={closeBulkDeleteConfirm}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Delete All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {isDeleting && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -233,10 +325,7 @@ export default function ProductList() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Delete</h3>
             <p className="text-sm text-gray-500 mb-4">
               Are you sure you want to delete{" "}
-              <span className="font-semibold">
-                {productToDelete?.name} {productToDelete?.variant && `(${productToDelete.variant})`}
-              </span>
-              ? This action cannot be undone.
+              <span className="font-semibold">{productToDelete?.name}</span>? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button

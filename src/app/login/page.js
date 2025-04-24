@@ -31,10 +31,12 @@ export default function Login() {
 
       try {
         setIsLoading(true);
+        console.log("Sending password reset email to:", email);
         await forgotPassword(email);
         setResetSent(true);
         setIsLoading(false);
       } catch (err) {
+        console.error("Password reset error:", err);
         setError(err.message);
         setIsLoading(false);
       }
@@ -48,9 +50,12 @@ export default function Login() {
 
     try {
       setIsLoading(true);
+      console.log("Attempting login for:", email);
       await login(email, password);
+      console.log("Login successful for:", email);
       router.push("/dashboard");
     } catch (err) {
+      console.error("Login error:", err);
       setError(err.message || "Login failed. Please check your credentials.");
       setIsLoading(false);
     }

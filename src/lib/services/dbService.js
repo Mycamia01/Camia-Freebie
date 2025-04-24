@@ -37,7 +37,7 @@ import {
      * @param {Object} data - Document data
      * @returns {Promise<Object>} Created document with ID
      */
-    async create(data) {
+  async create(data) {
       // Validate data against schema
       const validationResult = validateData(data, this.schema);
       if (!validationResult.isValid) {
@@ -56,6 +56,10 @@ import {
         const docRef = await addDoc(this.collectionRef, dataWithTimestamps);
         return { id: docRef.id, ...data };
       } catch (error) {
+        if (error.code === 'permission-denied') {
+          console.error('Firestore permission denied error:', error.message);
+          throw new Error('You do not have permission to perform this action.');
+        }
         throw error;
       }
     }
@@ -65,7 +69,7 @@ import {
      * @param {string} id - Document ID
      * @returns {Promise<Object|null>} Document data or null if not found
      */
-    async getById(id) {
+  async getById(id) {
       try {
         const docRef = doc(firestore, this.collectionName, id);
         const docSnap = await getDoc(docRef);
@@ -76,6 +80,10 @@ import {
           return null;
         }
       } catch (error) {
+        if (error.code === 'permission-denied') {
+          console.error('Firestore permission denied error:', error.message);
+          throw new Error('You do not have permission to perform this action.');
+        }
         throw error;
       }
     }
@@ -84,11 +92,15 @@ import {
      * Get all documents from the collection
      * @returns {Promise<Array>} Array of documents
      */
-    async getAll() {
+  async getAll() {
       try {
         const querySnapshot = await getDocs(this.collectionRef);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       } catch (error) {
+        if (error.code === 'permission-denied') {
+          console.error('Firestore permission denied error:', error.message);
+          throw new Error('You do not have permission to perform this action.');
+        }
         throw error;
       }
     }
@@ -99,7 +111,7 @@ import {
      * @param {Object} data - Updated data
      * @returns {Promise<Object>} Updated document
      */
-    async update(id, data) {
+  async update(id, data) {
       // Validate data against schema
       const validationResult = validateData(data, this.schema);
       if (!validationResult.isValid) {
@@ -118,6 +130,10 @@ import {
         await updateDoc(docRef, dataWithTimestamp);
         return { id, ...data };
       } catch (error) {
+        if (error.code === 'permission-denied') {
+          console.error('Firestore permission denied error:', error.message);
+          throw new Error('You do not have permission to perform this action.');
+        }
         throw error;
       }
     }
@@ -127,11 +143,15 @@ import {
      * @param {string} id - Document ID
      * @returns {Promise<void>}
      */
-    async delete(id) {
+  async delete(id) {
       try {
         const docRef = doc(firestore, this.collectionName, id);
         await deleteDoc(docRef);
       } catch (error) {
+        if (error.code === 'permission-denied') {
+          console.error('Firestore permission denied error:', error.message);
+          throw new Error('You do not have permission to perform this action.');
+        }
         throw error;
       }
     }
@@ -142,7 +162,7 @@ import {
      * @param {Object} options - Query options (orderByField, orderDirection, limitCount)
      * @returns {Promise<Array>} Array of documents matching the query
      */
-    async query(filters = [], options = {}) {
+  async query(filters = [], options = {}) {
       try {
         let q = this.collectionRef;
   
@@ -166,6 +186,10 @@ import {
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       } catch (error) {
+        if (error.code === 'permission-denied') {
+          console.error('Firestore permission denied error:', error.message);
+          throw new Error('You do not have permission to perform this action.');
+        }
         throw error;
       }
     }

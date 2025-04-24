@@ -9,8 +9,10 @@ export default function Header() {
   const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
   const [mounted, setMounted] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -39,13 +41,38 @@ export default function Header() {
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-lg font-bold">CAMIA Freebie</h1>
           <nav>
-            <ul className="flex space-x-6 items-center">
+            <button
+              className="md:hidden block focus:outline-none"
+              aria-label="Toggle menu"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <svg
+                className="h-6 w-6 fill-current"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                {menuOpen ? (
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M18.364 5.636a1 1 0 00-1.414-1.414L12 9.172 7.05 4.222a1 1 0 00-1.414 1.414L10.828 12l-5.192 5.192a1 1 0 001.414 1.414L12 14.828l4.95 4.95a1 1 0 001.414-1.414L13.172 12l5.192-5.192z"
+                  />
+                ) : (
+                  <path d="M4 5h16M4 12h16M4 19h16" />
+                )}
+              </svg>
+            </button>
+            <ul
+              className={`md:flex md:space-x-6 items-center ${
+                menuOpen ? "block" : "hidden"
+              }`}
+            >
               {/* Show Home button only on login page */}
               {pathname === "/login" && (
                 <li>
                   <button
                     onClick={() => router.push("/")}
-                    className="hover:underline px-3 py-1"
+                    className="hover:underline px-3 py-1 block md:inline-block"
                   >
                     Home
                   </button>
@@ -53,18 +80,35 @@ export default function Header() {
               )}
 
               <li>
-                <a href="/dashboard" className="hover:underline px-3 py-1">
+                <a
+                  href="/dashboard"
+                  className="hover:underline px-3 py-1 block md:inline-block"
+                >
                   Dashboard
                 </a>
               </li>
               <li>
-                <a href="/products" className="hover:underline px-3 py-1">
+                <a
+                  href="/products"
+                  className="hover:underline px-3 py-1 block md:inline-block"
+                >
                   Products
                 </a>
               </li>
               <li>
-                <a href="/customers" className="hover:underline px-3 py-1">
+                <a
+                  href="/customers"
+                  className="hover:underline px-3 py-1 block md:inline-block"
+                >
                   Customers
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/analytics"
+                  className="hover:underline px-3 py-1 block md:inline-block"
+                >
+                  Analytics
                 </a>
               </li>
 
@@ -73,7 +117,7 @@ export default function Header() {
                 <li>
                   <button
                     onClick={handleLogoutClick}
-                    className="hover:underline px-3 py-1 flex items-center space-x-1"
+                    className="hover:underline px-3 py-1 flex items-center space-x-1 block md:inline-flex"
                     aria-label="Logout"
                   >
                     <span>Logout</span>

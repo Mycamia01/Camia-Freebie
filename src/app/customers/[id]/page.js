@@ -1,12 +1,13 @@
 // app/customers/[id]/page.js
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, use } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import CustomerForm from "../CustomerForm";
 
-export default function EditCustomer({ params }) {
+export default function EditCustomer(props) {
+  const params = use(props.params);
   const { id } = params;
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();

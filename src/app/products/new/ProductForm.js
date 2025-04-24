@@ -1,4 +1,3 @@
-// app/products/ProductForm.js
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,7 +11,6 @@ export default function ProductForm({ productId, editableFields }) {
 
   const [formData, setFormData] = useState({
     name: "",
-    variant: "",
     price: "",
     qty: "",
     category: ""
@@ -31,7 +29,7 @@ export default function ProductForm({ productId, editableFields }) {
           const product = await productService.getById(productId);
           if (product) {
             setFormData({
-              ...product,
+              name: product.name,
               price: product.price.toString(),
               qty: product.qty.toString(),
               category: product.category || ""
@@ -164,23 +162,6 @@ export default function ProductForm({ productId, editableFields }) {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            ) : null}
-
-            {/* Variant */}
-            {!editableFields || editableFields.includes("variant") ? (
-              <div className="md:col-span-2">
-                <label htmlFor="variant" className="block text-sm font-medium text-gray-700 mb-1">
-                  Variant
-                </label>
-                <input
-                  type="text"
-                  id="variant"
-                  name="variant"
-                  value={formData.variant}
-                  onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

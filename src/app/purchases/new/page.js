@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import productService from "../../../lib/services/productService";
 import freebieService from "../../../lib/services/freebieService";
 import purchaseService from "../../../lib/services/purchaseService";
+import customerService from "../../../lib/services/customerService";
 
 export default function NewPurchasePage() {
   const router = useRouter();
@@ -81,12 +82,7 @@ export default function NewPurchasePage() {
 
   const handleCustomerChange = (e) => {
     const { name, value } = e.target;
-    if (name === "pincode") {
-      setCustomer((prev) => ({
-        ...prev,
-        pincode: value,
-      }));
-    } else if (name.startsWith("address.")) {
+    if (name.startsWith("address.")) {
       const addressField = name.split(".")[1];
       setCustomer((prev) => ({
         ...prev,
@@ -140,7 +136,7 @@ export default function NewPurchasePage() {
     setError("");
 
     const trimmedPhone = customer.phone.trim();
-    const trimmedPincode = customer.pincode.trim();
+    const trimmedPincode = (customer.address.pincode || "").trim();
 
     if (!validatePhone(trimmedPhone)) {
       setError("Phone number must be valid and contain 7 to 15 digits");
@@ -162,7 +158,30 @@ export default function NewPurchasePage() {
     }
     setLoading(true);
     try {
-      // Enrich selectedProducts with price from products list
+      const existingCustomersByName = await customerService.searchByName(customer.firstName);
+      const existingCustomer = existingCustomersByName.find(c =>
+        c.lastName.toLowerCase() === customer.lastName.toLowerCase() &&
+        (c.phone === trimmedPhone || c.email.toLowerCase() === customer.email.toLowerCase())
+      );
+
+      let customerId = existingCustomer ? existingCustomer.id : null;
+
+      if (!customerId) {
+        const newCustomerData = {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          phone: trimmedPhone,
+          email: customer.email,
+          hairType: customer.hairType,
+          skinType: customer.skinType,
+          pincode: trimmedPincode,
+          address: customer.address,
+          createdAt: new Date(),
+        };
+        const createdCustomer = await customerService.create(newCustomerData);
+        customerId = createdCustomer.id;
+      }
+
       const enrichedProducts = selectedProducts.map(item => {
         const product = products.find(p => p.id === item.productId);
         return {
@@ -175,7 +194,6 @@ export default function NewPurchasePage() {
       const purchaseData = {
         customer: {
           ...customer,
-          phone: trimmedPhone,
           pincode: trimmedPincode,
         },
         products: enrichedProducts,
@@ -194,13 +212,13 @@ export default function NewPurchasePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 mb-24 max-w-4xl">
       <h1 className="text-2xl font-bold mb-6">Record New Purchase</h1>
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>
       )}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <fieldset className="border p-4 rounded">
+                <fieldset className="border p-4 rounded">
           <legend className="font-semibold mb-2">Customer Details</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
@@ -249,7 +267,7 @@ export default function NewPurchasePage() {
             />
             <input
               type="text"
-              name="skinTyoe"
+              name="skinType"
               placeholder="Skin Type"
               value={customer.skinType}
               onChange={handleCustomerChange}
@@ -260,9 +278,9 @@ export default function NewPurchasePage() {
             <h3 className="font-semibold mb-2">Address</h3>
             <input
               type="text"
-              name="pincode"
+              name="address.pincode"
               placeholder="Pincode *"
-              value={customer.pincode}
+              value={customer.address.pincode}
               onChange={handleCustomerChange}
               required
               className="border p-2 rounded w-full mb-2"
@@ -367,7 +385,6 @@ export default function NewPurchasePage() {
             disabled={loading}
           />
         </fieldset>
-
         <div className="flex justify-end">
           <button
             type="submit"

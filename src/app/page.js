@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -61,9 +61,9 @@ export default function HomePage() {
         `}</style>
 
         <div className="max-w-screen-lg w-full text-center">
-          <h1 className="text-5xl font-bold mb-6">Welcome CAMIA Employees</h1>
-          <p className="text-xl mb-4">1 Customer to 1 Buy to all our LOYALS.</p>
-          <p className="text-lg mb-8">We hope you have good news! ADD A NEW CUSTOMER!</p>
+          <h1 className="text-5xl font-bold mb-6">Welcome to CAMIA Freebie</h1>
+          <p className="text-xl mb-4">Empowering your business with seamless customer and product management.</p>
+          <p className="text-lg mb-8">Get started by adding your first customer or product today!</p>
 
           <a
             className="inline-flex items-center gap-2 bg-white text-blue-600 hover:bg-gray-200 rounded-full font-medium text-base px-6 py-3 transition"

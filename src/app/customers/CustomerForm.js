@@ -18,6 +18,7 @@ export default function CustomerForm({ customerId }) {
     anniversary: "",
     skinType: "",
     hairType: "",
+    productName: "",
     forOwnConsumption: true
   });
 
@@ -32,17 +33,23 @@ export default function CustomerForm({ customerId }) {
         try {
           setLoading(true);
           const customer = await customerService.getById(customerId);
-          if (customer) {
-            // Format dates for form inputs if they exist
-            const formattedCustomer = {
-              ...customer,
-              dob: formatDateForInput(customer.dob),
-              anniversary: formatDateForInput(customer.anniversary)
-            };
-            setFormData(formattedCustomer);
-          } else {
-            setError("Customer not found");
-          }
+            if (customer) {
+              // Format dates for form inputs if they exist
+              const formattedCustomer = {
+                firstName: customer.firstName || "",
+                lastName: customer.lastName || "",
+                pincode: customer.pincode || "",
+                dob: formatDateForInput(customer.dob),
+                anniversary: formatDateForInput(customer.anniversary),
+                skinType: customer.skinType || "",
+                hairType: customer.hairType || "",
+                productName: customer.productName || "",
+                forOwnConsumption: customer.forOwnConsumption !== undefined ? customer.forOwnConsumption : true,
+              };
+              setFormData(formattedCustomer);
+            } else {
+              setError("Customer not found");
+            }
         } catch (err) {
           setError("Failed to load customer: " + err.message);
         } finally {

@@ -22,6 +22,8 @@ export default function PurchaseListPage() {
   const [error, setError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState(null);
+  const [selectedPurchaseIds, setSelectedPurchaseIds] = useState([]);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
 
   const loadPurchases = async () => {
     try {
@@ -54,12 +56,18 @@ export default function PurchaseListPage() {
 
   const getProductNames = (productsInPurchase) => {
     if (!productsInPurchase || productsInPurchase.length === 0) return "-";
-    return productsInPurchase
-      .map((item) => {
-        const product = products.find((p) => p.id === item.productId);
-        return product ? `${product.name} (x${item.qty})` : "Unknown";
-      })
-      .join(", ");
+    return (
+      <ul className="list-disc list-inside space-y-1">
+        {productsInPurchase.map((item, index) => {
+          const product = products.find((p) => p.id === item.productId);
+          return (
+            <li key={index}>
+              {product ? `${product.name} (x${item.qty})` : "Unknown"}
+            </li>
+          );
+        })}
+      </ul>
+    );
   };
 
   const getFreebieName = (freebieId) => {
@@ -67,52 +75,47 @@ export default function PurchaseListPage() {
     return freebie ? freebie.name : "-";
   };
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+  const formatDate = (date) => {
+    if (!date) return "-";
+    const d = date.toDate ? date.toDate() : new Date(date);
+    return isNaN(d) ? "-" : d.toLocaleDateString();
   };
 
-  const handleFilterMonthChange = (e) => {
-    setFilterMonth(e.target.value);
-  };
-
-  const handleFilterDayChange = (e) => {
-    setFilterDay(e.target.value);
-  };
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
+  const handleFilterMonthChange = (e) => setFilterMonth(e.target.value);
+  const handleFilterDayChange = (e) => setFilterDay(e.target.value);
 
   const filteredPurchases = purchases.filter((purchase) => {
-    const customerName = getCustomerName(purchase.customerId).toLowerCase();
-    const productNames = getProductNames(purchase.products).toLowerCase();
-    const freebieName = getFreebieName(purchase.freebieId).toLowerCase();
     const search = searchTerm.toLowerCase();
+    const customerName = getCustomerName(purchase.customerId).toLowerCase();
+    const productNames = getProductNames(purchase.products).props?.children
+      ?.map(li => li.props.children.toString().toLowerCase())
+      ?.join(", ") || "";
+    const freebieName = getFreebieName(purchase.freebieId).toLowerCase();
 
     if (
       !customerName.includes(search) &&
       !productNames.includes(search) &&
       !freebieName.includes(search)
-    ) {
-      return false;
-    }
+    ) return false;
 
-    if (filterMonth) {
-      const purchaseDate = purchase.purchaseDate?.toDate
-        ? purchase.purchaseDate.toDate()
-        : new Date(purchase.purchaseDate);
-      if (purchaseDate.getMonth() + 1 !== Number(filterMonth)) {
-        return false;
-      }
-    }
+    const purchaseDate = purchase.purchaseDate?.toDate
+      ? purchase.purchaseDate.toDate()
+      : new Date(purchase.purchaseDate);
 
-    if (filterDay) {
-      const purchaseDate = purchase.purchaseDate?.toDate
-        ? purchase.purchaseDate.toDate()
-        : new Date(purchase.purchaseDate);
-      if (purchaseDate.getDate() !== Number(filterDay)) {
-        return false;
-      }
-    }
+    if (filterMonth && purchaseDate.getMonth() + 1 !== Number(filterMonth)) return false;
+    if (filterDay && purchaseDate.getDate() !== Number(filterDay)) return false;
 
     return true;
   });
+
+  const togglePurchaseSelection = (purchaseId) => {
+    setSelectedPurchaseIds((prev) =>
+      prev.includes(purchaseId)
+        ? prev.filter((id) => id !== purchaseId)
+        : [...prev, purchaseId]
+    );
+  };
 
   const confirmDelete = (purchase) => {
     setPurchaseToDelete(purchase);
@@ -127,9 +130,9 @@ export default function PurchaseListPage() {
       setPurchases(purchases.filter((p) => p.id !== purchaseToDelete.id));
       setIsDeleting(false);
       setPurchaseToDelete(null);
-      setLoading(false);
     } catch (err) {
       setError("Failed to delete purchase: " + err.message);
+    } finally {
       setLoading(false);
     }
   };
@@ -139,20 +142,22 @@ export default function PurchaseListPage() {
     setPurchaseToDelete(null);
   };
 
-  const handleEdit = (purchaseId) => {
-    router.push(`/purchases/edit/${purchaseId}`);
-  };
+  const openBulkDeleteConfirm = () => setIsBulkDeleteConfirmOpen(true);
+  const closeBulkDeleteConfirm = () => setIsBulkDeleteConfirmOpen(false);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleBulkDelete = async () => {
+    try {
+      setLoading(true);
+      await Promise.all(selectedPurchaseIds.map(id => purchaseService.delete(id)));
+      setPurchases(purchases.filter(p => !selectedPurchaseIds.includes(p.id)));
+      setSelectedPurchaseIds([]);
+      setIsBulkDeleteConfirmOpen(false);
+    } catch (err) {
+      setError("Bulk delete failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -180,6 +185,17 @@ export default function PurchaseListPage() {
         </button>
       </div>
 
+      {selectedPurchaseIds.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={openBulkDeleteConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Delete All ({selectedPurchaseIds.length})
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-4">
         <input
           type="text"
@@ -188,11 +204,7 @@ export default function PurchaseListPage() {
           onChange={handleSearchChange}
           className="border p-2 rounded w-full md:w-1/3 mb-2 md:mb-0"
         />
-        <select
-          value={filterMonth}
-          onChange={handleFilterMonthChange}
-          className="border p-2 rounded w-full md:w-1/6 mb-2 md:mb-0"
-        >
+        <select value={filterMonth} onChange={handleFilterMonthChange} className="border p-2 rounded w-full md:w-1/6 mb-2 md:mb-0">
           <option value="">All Months</option>
           {[...Array(12)].map((_, i) => (
             <option key={i + 1} value={i + 1}>
@@ -200,16 +212,10 @@ export default function PurchaseListPage() {
             </option>
           ))}
         </select>
-        <select
-          value={filterDay}
-          onChange={handleFilterDayChange}
-          className="border p-2 rounded w-full md:w-1/6"
-        >
+        <select value={filterDay} onChange={handleFilterDayChange} className="border p-2 rounded w-full md:w-1/6">
           <option value="">All Days</option>
           {[...Array(31)].map((_, i) => (
-            <option key={i + 1} value={i + 1}>
-              {i + 1}
-            </option>
+            <option key={i + 1} value={i + 1}>{i + 1}</option>
           ))}
         </select>
       </div>
@@ -218,66 +224,49 @@ export default function PurchaseListPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Customer
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Products
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Freebie
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Purchase Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total Amount
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+              <th className="px-3 py-3"><input type="checkbox"
+                onChange={(e) =>
+                  setSelectedPurchaseIds(e.target.checked ? filteredPurchases.map(p => p.id) : [])
+                }
+                checked={selectedPurchaseIds.length === filteredPurchases.length && filteredPurchases.length > 0}
+              /></th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Freebie</th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purchase Date</th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredPurchases.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
-                  No purchases found.
-                </td>
+                <td colSpan="7" className="text-center px-3 py-4 text-sm text-gray-500">No purchases found.</td>
               </tr>
             ) : (
               filteredPurchases.map((purchase) => (
                 <tr key={purchase.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {getCustomerName(purchase.customerId)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {getProductNames(purchase.products)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {getFreebieName(purchase.freebieId)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {purchase.purchaseDate?.toDate
-                      ? purchase.purchaseDate.toDate().toLocaleDateString()
-                      : new Date(purchase.purchaseDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ₹{purchase.totalAmount.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-3 py-4"><input
+                    type="checkbox"
+                    checked={selectedPurchaseIds.includes(purchase.id)}
+                    onChange={() => togglePurchaseSelection(purchase.id)}
+                  /></td>
+                  <td className="px-3 py-4">{getCustomerName(purchase.customerId)}</td>
+                  <td className="px-3 py-4">{getProductNames(purchase.products)}</td>
+                  <td className="px-3 py-4">{getFreebieName(purchase.freebieId)}</td>
+                  <td className="px-3 py-4">{formatDate(purchase.purchaseDate)}</td>
+                  <td className="px-3 py-4">₹{purchase.totalAmount.toFixed(2)}</td>
+                  <td className="px-3 py-4 text-right">
                     <div className="flex justify-end space-x-2">
                       <button
                         onClick={() => router.push(`/purchases/${purchase.id}`)}
                         className="text-blue-600 hover:text-blue-900"
-                        title="Edit"
                       >
                         <Edit size={18} />
                       </button>
                       <button
                         onClick={() => confirmDelete(purchase)}
                         className="text-red-600 hover:text-red-900"
-                        title="Delete"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -290,27 +279,29 @@ export default function PurchaseListPage() {
         </table>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Bulk Delete Modal */}
+      {isBulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Bulk Delete</h3>
+            <p className="text-sm text-gray-500 mb-4">Are you sure you want to delete all selected purchases?</p>
+            <div className="flex justify-end space-x-3">
+              <button onClick={closeBulkDeleteConfirm} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+              <button onClick={handleBulkDelete} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Delete All</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Single Delete Modal */}
       {isDeleting && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Delete</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Are you sure you want to delete this purchase? This action cannot be undone.
-            </p>
+            <p className="text-sm text-gray-500 mb-4">Are you sure you want to delete this purchase?</p>
             <div className="flex justify-end space-x-3">
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Delete
-              </button>
+              <button onClick={cancelDelete} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+              <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
             </div>
           </div>
         </div>

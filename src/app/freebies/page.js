@@ -15,6 +15,8 @@ export default function FreebiesPage() {
   const [error, setError] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [freebieToDelete, setFreebieToDelete] = useState(null);
+  const [selectedFreebieIds, setSelectedFreebieIds] = useState([]);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -27,9 +29,9 @@ export default function FreebiesPage() {
         setFreebies(allFreebies);
         setProducts(allProducts);
         setFilteredFreebies(allFreebies);
-        setLoading(false);
       } catch (err) {
         setError("Failed to load freebies.");
+      } finally {
         setLoading(false);
       }
     }
@@ -47,6 +49,12 @@ export default function FreebiesPage() {
     }
   }, [searchTerm, freebies]);
 
+  const toggleFreebieSelection = (freebieId) => {
+    setSelectedFreebieIds((prev) =>
+      prev.includes(freebieId) ? prev.filter((id) => id !== freebieId) : [...prev, freebieId]
+    );
+  };
+
   const confirmDelete = (freebie) => {
     setFreebieToDelete(freebie);
     setIsDeleting(true);
@@ -54,15 +62,15 @@ export default function FreebiesPage() {
 
   const handleDelete = async () => {
     if (!freebieToDelete) return;
-
     try {
       setLoading(true);
       await freebieService.delete(freebieToDelete.id);
-      setFreebies((prev) => prev.filter((freebie) => freebie.id !== freebieToDelete.id));
-      setFilteredFreebies((prev) => prev.filter((freebie) => freebie.id !== freebieToDelete.id));
+      setFreebies((prev) => prev.filter((f) => f.id !== freebieToDelete.id));
+      setFilteredFreebies((prev) => prev.filter((f) => f.id !== freebieToDelete.id));
+      setSelectedFreebieIds((prev) => prev.filter((id) => id !== freebieToDelete.id));
       setIsDeleting(false);
       setFreebieToDelete(null);
-    } catch (error) {
+    } catch {
       alert("Failed to delete freebie. Please try again.");
     } finally {
       setLoading(false);
@@ -74,7 +82,24 @@ export default function FreebiesPage() {
     setFreebieToDelete(null);
   };
 
-  // Helper to get product name by ID
+  const openBulkDeleteConfirm = () => setIsBulkDeleteConfirmOpen(true);
+  const closeBulkDeleteConfirm = () => setIsBulkDeleteConfirmOpen(false);
+
+  const handleBulkDelete = async () => {
+    try {
+      setLoading(true);
+      await Promise.all(selectedFreebieIds.map(id => freebieService.delete(id)));
+      setFreebies(freebies.filter(f => !selectedFreebieIds.includes(f.id)));
+      setFilteredFreebies(filteredFreebies.filter(f => !selectedFreebieIds.includes(f.id)));
+      setSelectedFreebieIds([]);
+      closeBulkDeleteConfirm();
+    } catch {
+      alert("Bulk delete failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getProductNameById = (id) => {
     const product = products.find((p) => p.id === id);
     return product ? product.name : id;
@@ -102,37 +127,58 @@ export default function FreebiesPage() {
         />
       </div>
 
+      {selectedFreebieIds.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={openBulkDeleteConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Delete All ({selectedFreebieIds.length})
+          </button>
+        </div>
+      )}
+
       <div className="overflow-x-auto border border-gray-200 rounded-md shadow-sm">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-purple-100">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">
-                Name
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedFreebieIds(filteredFreebies.map(f => f.id));
+                    } else {
+                      setSelectedFreebieIds([]);
+                    }
+                  }}
+                  checked={selectedFreebieIds.length === filteredFreebies.length && filteredFreebies.length > 0}
+                />
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">
-                Blend
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">
-                Value
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">
-                Available Quantity
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-purple-700 uppercase tracking-wider">
-                Actions
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Blend</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Value</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Available Qty</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-purple-700 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredFreebies.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
                   No freebies found.
                 </td>
               </tr>
             ) : (
               filteredFreebies.map((freebie) => (
                 <tr key={freebie.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedFreebieIds.includes(freebie.id)}
+                      onChange={() => toggleFreebieSelection(freebie.id)}
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-900">
                     {freebie.name}
                   </td>
@@ -143,9 +189,7 @@ export default function FreebiesPage() {
                           <li key={index}>{getProductNameById(productId)}</li>
                         ))}
                       </ul>
-                    ) : (
-                      "-"
-                    )}
+                    ) : "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     {freebie.value !== undefined ? freebie.value : "-"}
@@ -173,7 +217,7 @@ export default function FreebiesPage() {
         </table>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Single Delete Modal */}
       {isDeleting && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
@@ -194,6 +238,32 @@ export default function FreebiesPage() {
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Modal */}
+      {isBulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Bulk Delete</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Are you sure you want to delete all selected freebies? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={closeBulkDeleteConfirm}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Delete All
               </button>
             </div>
           </div>
