@@ -19,7 +19,9 @@ export default function CustomerForm({ customerId }) {
     skinType: "",
     hairType: "",
     productName: "",
-    forOwnConsumption: true
+    forOwnConsumption: true,
+    phone: "",
+    email: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -301,23 +303,56 @@ export default function CustomerForm({ customerId }) {
               />
             </div>
 
-            {/* For Own Consumption */}
-            <div className="md:col-span-2">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="forOwnConsumption"
-                  name="forOwnConsumption"
-                  checked={formData.forOwnConsumption}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="forOwnConsumption" className="ml-2 block text-sm text-gray-700">
-                  For own consumption (unchecked means for family)
+              {/* For Own Consumption */}
+              <div className="md:col-span-2">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="forOwnConsumption"
+                    name="forOwnConsumption"
+                    checked={formData.forOwnConsumption}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="forOwnConsumption" className="ml-2 block text-sm text-gray-700">
+                    For own consumption (unchecked means for family)
+                  </label>
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone
                 </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  pattern="\\+?[0-9\\-\\s]{7,15}"
+                  placeholder="+1234567890"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="example@example.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
-          </div>
 
           <div className="flex justify-end">
             <button
